@@ -1,34 +1,70 @@
-# Snort Intrusion Detection Lab
+# CS 565 Term Project: Access Control Warnings
 
-## Overview
+## What are Access Control Warnings?
 
-This lab demonstrates how access control warnings can be generated and analyzed using an intrusion detection system (IDS) in Kali Linux, with Snort configured to monitor network traffic and alert on suspicious activity.
+Unauthorized access control warnings are security alerts triggered when a system detects abnormal or unwarranted attempts to access data or resources. These warnings typically come from intrusion detection systems (IDS), behavior-based analytics, and authentication monitoring. In layman's terms, it is when a person or persons attempt to access a system without permission, or when a user behaves outside their normal pattern. Attempts to gain access to these systems usually generate multiple failed login attempts.
 
-## Environment
+## Example Vulnerabilities of Access Control
 
-- Kali Linux
-- Snort (IDS)
+### Faulty Monitoring
 
-## What I Did
+Attacks against access control often go unnoticed. Zero-day exploits are attacks or vulnerabilities unknown to the vendor or developer, with no patch available to mitigate them. This relates to faulty monitoring because threat actors can use these exploits to bypass intrusion detection systems that cannot detect them, leading to unnoticed data theft. An example is a brute-force attack where up to fifty login attempts are made but no warning is triggered.
 
-### Step 1: Identify the Network Interface
-Ran `ip a` to inspect the system's network interfaces, identifying the primary interface (`eth0`) and retrieving its IPv4 address for use in traffic monitoring.
+## Lab
 
-### Step 2: Validate the Snort Configuration
-Opened the Snort configuration file with `sudo nano /etc/snort/snort.conf`, then checked that the configuration was valid using:
+This lab demonstrates how access control warnings can be generated and analyzed using an intrusion detection system in Kali Linux, with Snort configured to monitor network traffic.
+
+### Step 1: Identify the network interface
+
+Run `ip a` to analyze the system's network interfaces. This identifies the primary interface (`eth0`) and its IPv4 address, which is used for traffic monitoring.
+
+```bash
+ip a
 ```
+
+![Output of ip a showing network interfaces](images/01-ip-a.png)
+
+Then open the Snort configuration:
+
+```bash
+sudo nano /etc/snort/snort.conf
+```
+
+### Step 2: Validate the configuration
+
+Check that the configuration is valid:
+
+```bash
 sudo snort -c /etc/snort/snort.lua -T
 ```
 
-### Step 3: Add a Custom Detection Rule
-Opened the local rules file with `sudo nano /etc/snort/rules/local.rules` and added the following rule to detect ICMP traffic:
+### Step 3: Add a local rule
+
+Open the local rules file:
+
+```bash
+sudo nano /etc/snort/rules/local.rules
+```
+
+Paste in the following rule:
+
 ```
 alert icmp any any -> any any ( msg:"Access Control Warning: ICMP Traffic Detected"; sid:1000002; rev:1; )
 ```
 
-### Step 5: Enable the Local Rules in Snort's Configuration
-Opened `sudo nano /etc/snort/snort.lua` and added the following block to enable the built-in rules along with the custom local rules:
+![local.rules file containing the ICMP alert rule](images/02-local-rules.png)
+
+### Step 4: Enable the rules in the Snort config
+
+Open the Snort configuration:
+
+```bash
+sudo nano /etc/snort/snort.lua
 ```
+
+Then add this block for the IDS:
+
+```lua
 ips =
 {
     enable_builtin_rules = true,
@@ -38,33 +74,48 @@ ips =
 }
 ```
 
-### Step 6: Revalidate the Configuration
-Re-ran `sudo snort -c /etc/snort/snort.lua -T` to confirm the updated configuration was still valid.
+### Step 5: Revalidate the configuration
 
-### Step 7: Run Snort
-Started Snort in a first terminal to actively monitor traffic:
+```bash
+sudo snort -c /etc/snort/snort.lua -T
 ```
+
+### Step 6: Run Snort
+
+In the first terminal, start Snort:
+
+```bash
 sudo snort -c /etc/snort/snort.lua -i lo -A alert_fast -k none
 ```
 
-### Step 8: Trigger the ICMP Rule
-In a second terminal, ran `ping -c 4 127.0.0.1` to generate ICMP traffic and trigger the custom rule. Snort successfully detected the traffic and produced an "Access Control Warning: ICMP Traffic Detected" alert in the first terminal, confirming the IDS was working as configured.
+### Step 7: Trigger the ICMP rule
 
-## Existing vs. Improved Warning Systems
+In a second terminal, send pings to trigger the Access Control Warning:
 
-**Existing Warning Systems**
-- Intrusion Detection Systems (IDS), e.g., Snort
+```bash
+ping -c 4 127.0.0.1
+```
+
+### Results
+
+First terminal with Snort running, showing the "Access Control Warning" alerts:
+
+![Snort running and displaying Access Control Warning alerts](images/03-snort-alert.png)
+
+Second terminal running the ping command:
+
+![Second terminal running the ping command](images/04-ping-terminal.png)
+
+## Existing Warning Systems
+
+**Intrusion Detection Systems (IDS)**, for example Snort:
+
 - Monitor network traffic in real time
 - Detect suspicious patterns (e.g., repeated access attempts)
 - Generate alerts based on predefined rules
 
-**Potential Improvements**
-- Detect anomalies instead of relying only on static rules
+## Improvements to Warning Systems
+
+- Detect anomalies instead of relying only on rules
 - Identify unusual login patterns or access behavior
 - Reduce false positives
-
-## Key Takeaways
-
-- Rule-based IDS tools like Snort are effective at flagging known, predefined traffic patterns (like ICMP floods) in real time, but their coverage is only as good as the rules configured.
-- Validating configuration changes (`-T` flag) before running Snort live is an important step to catch syntax errors early.
-- Purely rule-based detection has limits — it can generate false positives and won't catch novel attack patterns, which is where anomaly-based detection could improve on traditional signature-based IDS.
